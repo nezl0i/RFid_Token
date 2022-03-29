@@ -1,11 +1,11 @@
 import time
 from functools import reduce
+
 import serial
 import serial.tools.list_ports
 
 
 class AppToken(serial.Serial):
-
     ERR_NONE = '\x00'
 
     _INIT = '\xAA\xDD\x00'  # 'AA DD'
@@ -18,6 +18,7 @@ class AppToken(serial.Serial):
     _WRITE_TAG = '\x02\x0C'  # + Data (00=по умолчанию / 01=блокировка # (токен будет доступен только для чтения!)
     # затем (5 байт) данные карты
     _WRITE_TAG_RESERVE = '\x03\x0C'  # + Data (00=по умолчанию / 01=блокировка # (токен будет доступен только для
+
     # чтения!) затем (5 байт) данные карты
 
     def __init__(self, uart_port, bauds=38400, debug=False):
@@ -58,15 +59,15 @@ class AppToken(serial.Serial):
             print(f'<< {self._tohexstring(result)}')
 
         if len(result) < 4 or result[3] != len(result) - 4:
-            raise IOError("answer bad length: %s" % (self._tohexstring(result),))
+            return f"answer bad length: {self._tohexstring(result)}"
         if self._tohexstring(result[:3]) != self._strtohex(self._INIT) or \
                 self._tohexstring(result[4:6]) != self._strtohex(opcode):
-            raise IOError("answer bad format: %s" % (self._tohexstring(result),))
+            return f"answer bad format: {self._tohexstring(result)}"
 
         status = result[6]
 
         if check_result and status != ord(check_result):
-            raise IOError(f"rfid command error #{status}")
+            return f"rfid command error #{status}"
 
         data = result[7:-1]
         if opcode == self._READ_TAG:
@@ -110,12 +111,11 @@ class AppToken(serial.Serial):
     def write_token(self, data, lock=False):
         lock = "\x01" if lock else "\x00"
         tmp_token = self._tochar(data)
-        return self._execute(self._WRITE_TAG, lock+tmp_token, check_result=self.ERR_NONE)[0]
+        return self._execute(self._WRITE_TAG, lock + tmp_token, check_result=self.ERR_NONE)[0]
 
 
 if __name__ == "__main__":
-
-    token = AppToken('/dev/ttyUSB0', debug=True)
+    token = AppToken('/dev/ttyUSB0', debug=False)
 
     # Color
     _RED = '\x01'
@@ -130,7 +130,11 @@ if __name__ == "__main__":
 
 
     print(f"Led status: {check(token.set_led(_GREEN))}")
-    print(f"Beep status: {check(token.beep(1))}")
+    # print(f"Beep status: {check(token.beep(1))}")
     print("INFO: " + token.get_info().decode())
-    print("Token: " + token.read_token())
-    # print(f"Write status: {check(token.write_token('Your Token', lock=False))}")
+
+    user_token = token.read_token()
+    print("Token: " + user_token)
+    with open('tokens.txt', 'a') as f:
+        f.write(f'{user_token}\n')
+    print(f"Write status: {check(token.write_token('', lock=False))}")
