@@ -8,7 +8,12 @@ import serial.tools.list_ports
 class AppToken(serial.Serial):
     ERR_NONE = '\x00'
 
-    _INIT = '\xAA\xDD\x00'  # 'AA DD'
+    _INIT = '\xAA\xDD\x00'
+
+    # Color
+    _RED = '\x01'
+    _GREEN = '\x02'
+    _NONE = '\x00'
 
     # Command code
     _INFO = '\x01\x02'  # Data None
@@ -18,15 +23,30 @@ class AppToken(serial.Serial):
     _WRITE_TAG = '\x02\x0C'  # + Data (00=по умолчанию / 01=блокировка # (токен будет доступен только для чтения!)
     # затем (5 байт) данные карты
     _WRITE_TAG_RESERVE = '\x03\x0C'  # + Data (00=по умолчанию / 01=блокировка # (токен будет доступен только для
-
     # чтения!) затем (5 байт) данные карты
+    _STATUS = False
 
     def __init__(self, uart_port, bauds=38400, debug=False):
         if uart_port.find("/") == -1:
             uart_port = "/dev/" + uart_port
         serial.Serial.__init__(self, uart_port, bauds, 8, serial.PARITY_NONE, timeout=0)
         self._debug = debug
-        self.list_port()
+        # self.list_port()
+        if not self._STATUS:
+            self.init()
+
+    @property
+    def debug(self):
+        return self._debug
+
+    @debug.setter
+    def debug(self, val):
+        self._debug = val
+
+    def init(self):
+        if self.get_info():
+            self.set_led(self._GREEN)
+            self._STATUS = True
 
     @staticmethod
     def list_port():
@@ -111,30 +131,32 @@ class AppToken(serial.Serial):
     def write_token(self, data, lock=False):
         lock = "\x01" if lock else "\x00"
         tmp_token = self._tochar(data)
-        return self._execute(self._WRITE_TAG, lock + tmp_token, check_result=self.ERR_NONE)[0]
+        return self._execute(self._WRITE_TAG_RESERVE, lock + tmp_token, check_result=self.ERR_NONE)[0]
 
 
-if __name__ == "__main__":
-    token = AppToken('/dev/ttyUSB0', debug=False)
-
-    # Color
-    _RED = '\x01'
-    _GREEN = '\x02'
-    _NONE = '\x00'
-
-    def check(tmp):
-        return {
-            tmp == 0: "OK",
-            tmp == 1: "Fail"
-        }[True]
-
-
-    print(f"Led status: {check(token.set_led(_GREEN))}")
-    # print(f"Beep status: {check(token.beep(1))}")
-    print("INFO: " + token.get_info().decode())
-
-    user_token = token.read_token()
-    print("Token: " + user_token)
-    with open('tokens.txt', 'a') as f:
-        f.write(f'{user_token}\n')
-    print(f"Write status: {check(token.write_token('', lock=False))}")
+"""
+    if __name__ == "__main__":
+        token = AppToken('/dev/ttyUSB0', debug=False)
+    
+        # Color
+        _RED = '\x01'
+        _GREEN = '\x02'
+        _NONE = '\x00'
+    
+        def check(tmp):
+            return {
+                tmp == 0: "OK",
+                tmp == 1: "Fail"
+            }[True]
+    
+    
+        print(f"Led status: {check(token.set_led(_GREEN))}")
+        print(f"Beep status: {check(token.beep(5))}")
+        print("INFO: " + token.get_info().decode())
+        #
+        user_token = token.read_token()
+        print("Token: " + user_token)
+        # with open('tokens.txt', 'a') as f:
+        #     f.write(f'{user_token}\n')
+        # print(f"Write status: {token.write_token('56 5A 9F EA C9', lock=False)}")
+"""
