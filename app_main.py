@@ -1,11 +1,6 @@
 from app_token import AppToken
 import argparse
 
-# Color
-_RED = '\x01'
-_GREEN = '\x02'
-_NONE = '\x00'
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -30,6 +25,7 @@ if __name__ == "__main__":
         print(token.get_info().decode())
 
     elif args.read:
+        token.beep()
         _token = token.read_token()
         if _token is None:
             print("No card present")
