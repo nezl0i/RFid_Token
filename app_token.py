@@ -48,7 +48,7 @@ class AppToken(serial.Serial):
             print(f'{port}')
         print('=' * 71, '\n')
 
-    def _execute(self, opcode, data="", check_result=None):
+    def _execute(self, opcode, data=""):
 
         assert (len(opcode) == 2 and len(data) <= 252)
         opcode_data = opcode + data
@@ -78,7 +78,7 @@ class AppToken(serial.Serial):
 
         status = result[6]
 
-        if check_result and status != ord(check_result):
+        if self.ERR_NONE and status != ord(self.ERR_NONE):
             return f"rfid command error #{status}"
 
         data = result[7:-1]
@@ -109,21 +109,21 @@ class AppToken(serial.Serial):
         return chr(reduce(lambda hi, lo: hi ^ ord(lo), code, 0))
 
     def beep(self, duration=10):
-        return self._execute(self._BEEP, chr(duration), check_result=self.ERR_NONE)[0]
+        return self._execute(self._BEEP, chr(duration))[0]
 
     def set_led(self, code):
-        return self._execute(self._COLOR, code, check_result=self.ERR_NONE)[0]
+        return self._execute(self._COLOR, code)[0]
 
     def get_info(self):
-        return self._execute(self._INFO, check_result=self.ERR_NONE)[1]
+        return self._execute(self._INFO)[1]
 
     def read_token(self):
-        return self._execute(self._READ_TAG, check_result=self.ERR_NONE)[1]
+        return self._execute(self._READ_TAG)[1]
 
     def write_token(self, data, lock=False):
         lock = "\x01" if lock else "\x00"
         tmp_token = self._tochar(data)
-        return self._execute(self._WRITE_TAG, lock + tmp_token, check_result=self.ERR_NONE)[0]
+        return self._execute(self._WRITE_TAG, lock + tmp_token)[0]
 
 
 #
@@ -141,12 +141,12 @@ if __name__ == "__main__":
 
 
     # print(f"Led status: {check(token.set_led(_GREEN))}")
-    # print(f"Beep status: {check(token.beep(5))}")
+    print(f"Beep status: {check(token.beep(5))}")
     # print("INFO: " + token.get_info().decode())
 
     # Чтение токена
     print(f"Default token: {token.read_token()}")
 
     # Запись токена
-    # print(f"Write status: {token.write_token('08 00 15 54 74')}")
-    # print(f"Writen token: {token.read_token()}")
+    print(f"Write status: {token.write_token('08 00 15 54 75')}")
+    print(f"Success token: {token.read_token()}")
